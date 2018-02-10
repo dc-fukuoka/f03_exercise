@@ -1,4 +1,17 @@
 fortran 2003 exercise, just for my study.
+like the following can be achieved.
+
+type(matrix) :: a, b, c, d
+
+call a%init(size)
+call b%init(size)
+call c%init(size)
+call a%set_mat(-1.0d0, 1.0d0, 5555)
+call b%set_mat(-2.0d0, 2.0d0, 7777)
+
+c = a*b
+d = c
+
 simply use C++ is enough...?
 
 dc-fukuoka@myubuntu:~/git/f03_exercise$ make
