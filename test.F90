@@ -1,7 +1,15 @@
 module mod1
   implicit none
-  private ::gen_rand
+!  private ::gen_rand, madd_, msub_, mm_
 
+  interface operator(+)
+     procedure madd_
+  end interface operator(+)
+
+  interface operator(-)
+     procedure msub_
+  end interface operator(-)
+  
   interface operator(*)
      procedure mm_
   end interface operator(*)
@@ -87,7 +95,41 @@ contains
        write(6, *)
     end do
   end subroutine show_mat_
+  
+  function madd_(a, b) result(c)
+    implicit none
+    type(matrix),intent(in)  :: a, b
+    type(matrix) :: c
+    integer :: i, j
+    integer :: size
 
+    size = a%size
+    call c%init(a%size)
+    !$omp parallel do
+    do j = 1, size
+       do i = 1, size
+          c%mat(i, j) = a%mat(i, j) + b%mat(i, j)
+       end do
+    end do
+  end function madd_
+
+  function msub_(a, b) result(c)
+    implicit none
+    type(matrix),intent(in)  :: a, b
+    type(matrix) :: c
+    integer :: i, j
+    integer :: size
+
+    size = a%size
+    call c%init(a%size)
+    !$omp parallel do
+    do j = 1, size
+       do i = 1, size
+          c%mat(i, j) = a%mat(i, j) - b%mat(i ,j)
+       end do
+    end do
+  end function msub_
+  
   function mm_(a, b) result(c)
     implicit none
     type(matrix),intent(in)  :: a, b
@@ -153,15 +195,15 @@ program main
   call b%set_mat(-2.0d0, 2.0d0, 7777)
 
   c = a*b
-  d = c
+  d = c+a-b
 
   write(6, *) "A:"
   call a%show_mat
   write(6, *) "B:"
   call b%show_mat
-  write(6, *) "C:"
+  write(6, *) "C = A*B:"
   call c%show_mat
-  write(6, *) "D:"
+  write(6, *) "D = C+A-B:"
   call d%show_mat
   
   stop
