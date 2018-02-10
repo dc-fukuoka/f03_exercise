@@ -190,7 +190,6 @@ program main
 
   call a%init(size)
   call b%init(size)
-  call c%init(size)
   call a%set_mat(-1.0d0, 1.0d0, 5555)
   call b%set_mat(-2.0d0, 2.0d0, 7777)
 
