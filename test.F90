@@ -12,26 +12,30 @@ module mod1
   interface operator(*)
      procedure mm_
   end interface operator(*)
-
-! for constructor
 #if 0
+  interface assignment(=)
+     procedure equal_
+  end interface assignment(=)
+#endif
   interface matrix
      module procedure init0_
      module procedure init1_
   end interface matrix
-#endif
+
   type matrix
      integer :: size
      real(8),allocatable,dimension(:, :) :: mat
    contains
-     generic   :: init          => init0, init1
-     procedure :: init0         => init0_
-     procedure :: init1         => init1_
-     procedure :: set_mat       => set_mat_
-     procedure :: show_mat      => show_mat_
-     procedure :: equal         => equal_
-     generic   :: assignment(=) => equal
-     final     :: fini
+     generic          :: init          => init0, init1
+     procedure,nopass :: init0         => init0_
+     procedure,nopass :: init1         => init1_
+     procedure        :: set_mat       => set_mat_
+     procedure        :: show_mat      => show_mat_
+#if 0
+     procedure        :: equal         => equal_
+     generic          :: assignment(=) => equal
+#endif
+     final            :: fini
   end type matrix
   
 contains
@@ -57,9 +61,9 @@ contains
     ierr = vsldeletestream(stream)
   end subroutine gen_rand
 
-  subroutine init0_(this)
+  function init0_() result(this)
     implicit none
-    class(matrix),intent(inout) :: this
+    type(matrix) :: this
     integer :: size
 
     size = 8
@@ -70,11 +74,11 @@ contains
     this%mat(:, :) = 0.0d0
     !$omp end workshare
     !$omp end parallel
-  end subroutine init0_
+  end function init0_
 
-  subroutine init1_(this, size)
+  function init1_(size) result(this)
     implicit none
-    class(matrix),intent(inout) :: this
+    type(matrix) :: this
     integer,intent(in) :: size
 
     this%size = size
@@ -84,7 +88,7 @@ contains
     this%mat(:, :) = 0.0d0
     !$omp end workshare
     !$omp end parallel
-  end subroutine init1_
+  end function init1_
 
   subroutine set_mat_(this, val_min, val_max, seed)
     implicit none
@@ -115,7 +119,7 @@ contains
     integer :: size
 
     size = a%size
-    call c%init(a%size)
+    c = matrix(size)
     !$omp parallel do
     do j = 1, size
        do i = 1, size
@@ -132,7 +136,7 @@ contains
     integer :: size
 
     size = a%size
-    call c%init(a%size)
+    c = matrix(size)
     !$omp parallel do
     do j = 1, size
        do i = 1, size
@@ -149,7 +153,7 @@ contains
     integer :: size
 
     size = a%size
-    call c%init(a%size)
+    c = matrix(size)
     !$omp parallel do
     do j = 1, size
        do k = 1, size
@@ -159,13 +163,13 @@ contains
        end do
     end do
   end function mm_
-
+#if 0
   subroutine equal_(lhs, rhs)
     implicit none
     class(matrix),intent(out) :: lhs
     class(matrix),intent(in)  :: rhs
 
-    call lhs%init1(rhs%size)
+!    lhs = init1_(rhs%size)
     
     !$omp parallel
     !$omp workshare
@@ -173,7 +177,7 @@ contains
     !$omp end workshare
     !$omp end parallel
   end subroutine equal_
-
+#endif
   subroutine fini(this)
     implicit none
     type(matrix),intent(inout) :: this
@@ -186,7 +190,7 @@ end module mod1
 program main
   use mod1
   implicit none
-  type(matrix) :: a, b, c, d
+  type(matrix) :: a, b, c, d, e
   integer :: size
   character(len=16) :: argv1
   integer :: i
@@ -199,13 +203,14 @@ program main
   end if
   write(6, *) "size:", size
 
-  call a%init(size)
-  call b%init(size)
+  a = matrix(size)
+  b = matrix(size)
   call a%set_mat(-1.0d0, 1.0d0, 5555)
   call b%set_mat(-2.0d0, 2.0d0, 7777)
 
   c = a*b
   d = c+a-b
+  e = d
 
   write(6, *) "A:"
   call a%show_mat
@@ -215,6 +220,8 @@ program main
   call c%show_mat
   write(6, *) "D = C+A-B:"
   call d%show_mat
+  write(6, *) "E = D"
+  call e%show_mat
   
   stop
 end program main
