@@ -1,6 +1,5 @@
 module mod1
   implicit none
-!  private ::gen_rand, madd_, msub_, mm_
 
   interface operator(+)
      procedure madd_
@@ -14,12 +13,20 @@ module mod1
      procedure mm_
   end interface operator(*)
 
+! for constructor
+#if 0
+  interface matrix
+     module procedure init0_
+     module procedure init1_
+  end interface matrix
+#endif
   type matrix
      integer :: size
      real(8),allocatable,dimension(:, :) :: mat
    contains
      generic   :: init          => init0, init1
-     procedure :: init0         => init0_, init1 => init1_
+     procedure :: init0         => init0_
+     procedure :: init1         => init1_
      procedure :: set_mat       => set_mat_
      procedure :: show_mat      => show_mat_
      procedure :: equal         => equal_
@@ -72,7 +79,11 @@ contains
 
     this%size = size
     allocate(this%mat(size, size))
+    !$omp parallel
+    !$omp workshare
     this%mat(:, :) = 0.0d0
+    !$omp end workshare
+    !$omp end parallel
   end subroutine init1_
 
   subroutine set_mat_(this, val_min, val_max, seed)

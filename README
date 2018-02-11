@@ -39,3 +39,5 @@ dc-fukuoka@myubuntu:~/git/f03_exercise$ ./a.out
    2.33954E+00   2.81399E-01  -1.50634E+00   3.31337E-01
   -2.77723E+00   1.26895E+00  -1.25025E-02  -4.69605E+00
    1.85987E-01  -3.07041E-01  -2.69002E+00  -4.30693E+00
+
+TODO: implement constructor in fortran and replace init() with it
