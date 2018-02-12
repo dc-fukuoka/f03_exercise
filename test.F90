@@ -13,7 +13,7 @@ module matrix_calc
   end interface operator(-)
   
   interface operator(*)
-     procedure mm_
+     procedure mmul_
   end interface operator(*)
 
   interface operator(/)
@@ -154,7 +154,7 @@ contains
     end do
   end function msub_
   
-  function mm_(a, b) result(c)
+  function mmul_(a, b) result(c)
     implicit none
     type(matrix),intent(in)  :: a, b
     type(matrix) :: c
@@ -171,7 +171,7 @@ contains
           end do
        end do
     end do
-  end function mm_
+  end function mmul_
 #if 0
   subroutine equal_(lhs, rhs)
     implicit none
@@ -320,7 +320,7 @@ contains
     b_inv = matrix(size)
     c     = matrix(size)
     call inverse(size, b%mat, b_inv%mat)
-    c =  mm_(a, b_inv)
+    c =  mmul_(a, b_inv)
   end function mdiv_
   
   subroutine fini(this)
