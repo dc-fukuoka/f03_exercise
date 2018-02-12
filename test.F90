@@ -29,7 +29,7 @@ module matrix_calc
      module procedure init1_
   end interface matrix
 
-  private :: a_dot_b, lu_decomp, inverse
+  private :: lu_decomp, inverse
 
   type matrix
      integer :: size
@@ -188,30 +188,6 @@ contains
   end subroutine equal_
 #endif
 
-  ! C = A*B
-  subroutine a_dot_b(size, a, b, c)
-    implicit none
-    integer,intent(in) :: size
-    real(dp),dimension(size, size),intent(in) :: a, b
-    real(dp),dimension(size, size),intent(out) :: c
-    integer :: i, j, k
-
-    !$omp parallel
-    !$omp workshare
-    c = 0.0d0
-    !$omp end workshare
-    !$omp do
-    do j = 1, size    
-       do k = 1, size
-          do i = 1, size
-             c(i, j) = c(i, j) + a(i, k)*b(k, j)
-          end do
-       end do
-    end do
-    !$omp end do
-    !$omp end parallel
-  end subroutine a_dot_b
-
   ! ref: http://workspacememory.hatenablog.com/entry/2017/03/01/173753
   subroutine lu_decomp(size, a, ipivot, lu)
     implicit none
@@ -344,7 +320,7 @@ contains
     b_inv = matrix(size)
     c     = matrix(size)
     call inverse(size, b%mat, b_inv%mat)
-    call a_dot_b(size, a%mat, b_inv%mat, c%mat)
+    c =  mm_(a, b_inv)
   end function mdiv_
   
   subroutine fini(this)
