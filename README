@@ -1,7 +1,7 @@
 fortran 2003 exercise, just for my study.
 like the following can be achieved.
 
-type(matrix) :: a, b, c, d, e
+type(matrix) :: a, b, c, d, e, f
 
 a = matrix(size)
 b = matrix(size)
@@ -12,6 +12,7 @@ call b%set_mat(-2.0d0, 2.0d0, 7777)
 c = a*b
 d = c+a-b
 e = d
+f = c/b ! = c*b^-1
 
 simply use C++ is enough...?
 
@@ -45,3 +46,8 @@ dc-fukuoka@myubuntu:~/git/f03_exercise$ ./a.out
    2.33954E+00   2.81399E-01  -1.50634E+00   3.31337E-01
   -2.77723E+00   1.26895E+00  -1.25025E-02  -4.69605E+00
    1.85987E-01  -3.07041E-01  -2.69002E+00  -4.30693E+00
+ F = C/B (=A)
+   6.71751E-01  -5.11412E-01   5.03268E-01  -5.15220E-01
+  -1.42823E-01  -4.56335E-01   1.01004E-01  -7.82845E-01
+  -7.78005E-01   9.79638E-01   7.61025E-01  -6.15416E-01
+  -8.88567E-01  -5.99848E-01   3.96229E-01  -8.35100E-01

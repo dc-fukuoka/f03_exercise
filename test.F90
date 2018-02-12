@@ -1,6 +1,9 @@
-module mod1
+module matrix_calc
   implicit none
 
+  integer,parameter  :: dp = kind(1.0d0)
+  real(dp),parameter :: tol = 1.0d-10
+  
   interface operator(+)
      procedure madd_
   end interface operator(+)
@@ -12,6 +15,10 @@ module mod1
   interface operator(*)
      procedure mm_
   end interface operator(*)
+
+  interface operator(/)
+     procedure mdiv_
+  end interface operator(/)
 #if 0
   interface assignment(=)
      procedure equal_
@@ -22,9 +29,11 @@ module mod1
      module procedure init1_
   end interface matrix
 
+  private :: a_dot_b, lu_decomp, inverse
+
   type matrix
      integer :: size
-     real(8),allocatable,dimension(:, :) :: mat
+     real(dp),allocatable,dimension(:, :) :: mat
    contains
      generic          :: init          => init0, init1
      procedure,nopass :: init0         => init0_
@@ -44,8 +53,8 @@ contains
     use mkl_vsl
     implicit none
     integer,intent(in) :: size
-    real(8),dimension(size, size),intent(out) :: a
-    real(8),intent(in) :: val_min, val_max
+    real(dp),dimension(size, size),intent(out) :: a
+    real(dp),intent(in) :: val_min, val_max
     integer,intent(in) :: seed
     integer::ierr
     integer::brng, method
@@ -93,7 +102,7 @@ contains
   subroutine set_mat_(this, val_min, val_max, seed)
     implicit none
     class(matrix),intent(inout) :: this
-    real(8),intent(in) :: val_min, val_max
+    real(dp),intent(in) :: val_min, val_max
     integer,intent(in) :: seed
 
     call gen_rand(this%size**2, this%mat, val_min, val_max, seed)
@@ -178,6 +187,167 @@ contains
     !$omp end parallel
   end subroutine equal_
 #endif
+
+  ! C = A*B
+  subroutine a_dot_b(size, a, b, c)
+    implicit none
+    integer,intent(in) :: size
+    real(dp),dimension(size, size),intent(in) :: a, b
+    real(dp),dimension(size, size),intent(out) :: c
+    integer :: i, j, k
+
+    !$omp parallel
+    !$omp workshare
+    c = 0.0d0
+    !$omp end workshare
+    !$omp do
+    do j = 1, size    
+       do k = 1, size
+          do i = 1, size
+             c(i, j) = c(i, j) + a(i, k)*b(k, j)
+          end do
+       end do
+    end do
+    !$omp end do
+    !$omp end parallel
+  end subroutine a_dot_b
+
+  ! ref: http://workspacememory.hatenablog.com/entry/2017/03/01/173753
+  subroutine lu_decomp(size, a, ipivot, lu)
+    implicit none
+    integer,intent(in) :: size
+    real(dp),dimension(size, size),intent(in) :: a
+    integer,dimension(size),intent(out) :: ipivot
+    real(dp),dimension(size, size),intent(out) :: lu
+    integer :: i, j, k
+    integer :: ip, tmp_ip
+    real(dp) :: tmp, max0, w
+
+    !$omp parallel
+    !$omp workshare
+    lu = a
+    !$omp end workshare
+    !$omp do
+    do i = 1, size
+       ipivot(i) = i
+    end do
+    !$omp end do
+    !$omp end parallel
+    do k = 1, size-1
+       max0 = abs(lu(k, k))
+       ip = k
+       ! this loop is impossible to parallelize for me
+       do i = k+1, size
+          tmp = abs(lu(i, k))
+          if (tmp > max0) then
+             max0 = tmp
+             ip  = i
+          end if
+       end do       
+
+       if (max0 <= tol) then
+          write(6, *) "one of diagonal component is smaller than", tol
+          stop
+       end if
+
+       if (ip .ne. k) then
+          !$omp parallel do private(tmp)
+          do j = k, size
+             tmp       = lu(ip, j)
+             lu(ip, j) = lu(k,  j)
+             lu(k,  j) = tmp
+          end do
+          tmp_ip     = ipivot(ip)
+          ipivot(ip) = ipivot(k)
+          ipivot(k)  = tmp_ip
+          !$omp parallel do private(tmp)
+          do j = 1, k-1
+             tmp       = lu(k, j)
+             lu(k,  j) = lu(ip, j)
+             lu(ip, j) = tmp
+          end do
+       end if
+       !$omp parallel do private(w)
+       do i = k+1, size
+          w        = lu(i, k)/lu(k, k)
+          lu(i, k) = w
+
+          do j = k+1, size
+             lu(i, j) = lu(i, j) - w*lu(k, j)
+          end do
+       end do
+    end do
+
+    ! write(100, *) ipivot ! for a debug
+    
+  end subroutine lu_decomp
+
+  subroutine inverse(size, a, a_inv)
+    implicit none
+    integer,intent(in) :: size
+    real(dp),dimension(size, size),intent(in)  :: a
+    real(dp),dimension(size, size),intent(out) :: a_inv
+    real(dp),dimension(size, size) :: lu
+    integer,dimension(size) :: ipivot
+    integer :: i, j, k
+    real(dp),dimension(size) :: unit_vec, y
+    real(dp) :: tmp
+
+    !$omp parallel
+    !$omp workshare
+    lu     = 0.0d0
+    ipivot = 0
+    a_inv  = 0.0d0
+    !$omp end workshare
+    !$omp end parallel
+    call lu_decomp(size, a, ipivot, lu)
+    
+    do k = 1, size
+       !$omp parallel
+       !$omp workshare
+       unit_vec = 0.0d0
+       !$omp end workshare
+       !$omp end parallel
+       unit_vec(k) = 1.0d0
+       
+       ! forward substitution
+       y(1) = unit_vec(ipivot(1))
+       do i = 2, size
+          tmp = 0.0d0
+          !$omp parallel do reduction(+:tmp)
+          do j = 1, i-1
+             tmp = tmp + lu(i, j)*y(j)
+          end do
+          y(i) = unit_vec(ipivot(i)) - tmp
+       end do
+       
+       ! backward substitution
+       a_inv(size, k) = y(size)/lu(size, size)
+       do i = size-1, 1, -1
+          tmp = 0.0d0
+       !$omp parallel do reduction(+:tmp)
+          do j = i+1, size
+             tmp = tmp + lu(i, j)*a_inv(j, k)
+          end do
+          a_inv(i, k) = (y(i) - tmp)/lu(i, i)
+       end do
+    end do
+  end subroutine inverse
+
+  function mdiv_(a, b) result(c)
+    type(matrix),intent(in)  :: a, b
+    type(matrix) :: c
+    type(matrix) :: b_inv
+    integer :: i, j, k
+    integer :: size
+
+    size  = a%size
+    b_inv = matrix(size)
+    c     = matrix(size)
+    call inverse(size, b%mat, b_inv%mat)
+    call a_dot_b(size, a%mat, b_inv%mat, c%mat)
+  end function mdiv_
+  
   subroutine fini(this)
     implicit none
     type(matrix),intent(inout) :: this
@@ -185,12 +355,12 @@ contains
     this%size = 0
     if (allocated(this%mat)) deallocate(this%mat)
   end subroutine fini
-end module mod1
+end module matrix_calc
 
 program main
-  use mod1
+  use matrix_calc
   implicit none
-  type(matrix) :: a, b, c, d, e
+  type(matrix) :: a, b, c, d, e, f
   integer :: size
   character(len=16) :: argv1
   integer :: i
@@ -211,6 +381,7 @@ program main
   c = a*b
   d = c+a-b
   e = d
+  f = c/b
 
   write(6, *) "A:"
   call a%show_mat
@@ -222,6 +393,8 @@ program main
   call d%show_mat
   write(6, *) "E = D"
   call e%show_mat
+  write(6, *) "F = C/B (=A)"
+  call f%show_mat
   
   stop
 end program main
