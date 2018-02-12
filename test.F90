@@ -4,44 +4,28 @@ module matrix_calc
   integer,parameter  :: dp = kind(1.0d0)
   real(dp),parameter :: tol = 1.0d-10
 
-  interface operator(+)
-     procedure madd_
-  end interface operator(+)
-
-  interface operator(-)
-     procedure msub_
-  end interface operator(-)
-
-  interface operator(*)
-     procedure mmul_
-  end interface operator(*)
-
-  interface operator(/)
-     procedure mdiv_
-  end interface operator(/)
-#if 0
-  interface assignment(=)
-     procedure equal_
-  end interface assignment(=)
-#endif
-  interface matrix
-     module procedure init0_
-     module procedure init1_
-  end interface matrix
-
   private :: lu_decomp, inverse
+
+  interface matrix
+     module procedure init0
+     module procedure init1
+  end interface matrix
 
   type matrix
      integer :: size
      real(dp),allocatable,dimension(:, :) :: mat
    contains
+     procedure,nopass :: init0, init1
      generic          :: init          => init0, init1
-     procedure,nopass :: init0         => init0_
-     procedure,nopass :: init1         => init1_
-     procedure        :: set_mat       => set_mat_
-     procedure        :: show_mat      => show_mat_
+     procedure        :: set_mat
+     procedure        :: show_mat
+     procedure        :: madd, msub, mmul, mdiv
+     generic          :: operator(+)   => madd
+     generic          :: operator(-)   => msub
+     generic          :: operator(*)   => mmul
+     generic          :: operator(/)   => mdiv
 #if 0
-     procedure        :: equal         => equal_
+     procedure        :: equal
      generic          :: assignment(=) => equal
 #endif
      final            :: fini
@@ -70,7 +54,7 @@ contains
     ierr = vsldeletestream(stream)
   end subroutine gen_rand
 
-  function init0_() result(this)
+  function init0() result(this)
     implicit none
     type(matrix) :: this
     integer :: size
@@ -83,9 +67,9 @@ contains
     this%mat(:, :) = 0.0d0
     !$omp end workshare
     !$omp end parallel
-  end function init0_
+  end function init0
 
-  function init1_(size) result(this)
+  function init1(size) result(this)
     implicit none
     type(matrix) :: this
     integer,intent(in) :: size
@@ -97,18 +81,18 @@ contains
     this%mat(:, :) = 0.0d0
     !$omp end workshare
     !$omp end parallel
-  end function init1_
+  end function init1
 
-  subroutine set_mat_(this, val_min, val_max, seed)
+  subroutine set_mat(this, val_min, val_max, seed)
     implicit none
     class(matrix),intent(inout) :: this
     real(dp),intent(in) :: val_min, val_max
     integer,intent(in) :: seed
 
     call gen_rand(this%size**2, this%mat, val_min, val_max, seed)
-  end subroutine set_mat_
+  end subroutine set_mat
 
-  subroutine show_mat_(this)
+  subroutine show_mat(this)
     class(matrix),intent(in) :: this
     integer :: i, j
 
@@ -118,11 +102,12 @@ contains
        end do
        write(6, *)
     end do
-  end subroutine show_mat_
+  end subroutine show_mat
 
-  function madd_(a, b) result(c)
+  function madd(a, b) result(c)
     implicit none
-    type(matrix),intent(in)  :: a, b
+    class(matrix),intent(in) :: a ! this
+    type(matrix),intent(in)  :: b
     type(matrix) :: c
     integer :: i, j
     integer :: size
@@ -135,11 +120,12 @@ contains
           c%mat(i, j) = a%mat(i, j) + b%mat(i, j)
        end do
     end do
-  end function madd_
+  end function madd
 
-  function msub_(a, b) result(c)
+  function msub(a, b) result(c)
     implicit none
-    type(matrix),intent(in)  :: a, b
+    class(matrix),intent(in) :: a ! this
+    type(matrix),intent(in)  :: b
     type(matrix) :: c
     integer :: i, j
     integer :: size
@@ -152,11 +138,12 @@ contains
           c%mat(i, j) = a%mat(i, j) - b%mat(i ,j)
        end do
     end do
-  end function msub_
+  end function msub
 
-  function mmul_(a, b) result(c)
+  function mmul(a, b) result(c)
     implicit none
-    type(matrix),intent(in)  :: a, b
+    class(matrix),intent(in) ::a ! this
+    type(matrix),intent(in)  :: b
     type(matrix) :: c
     integer :: i, j, k
     integer :: size
@@ -171,14 +158,14 @@ contains
           end do
        end do
     end do
-  end function mmul_
+  end function mmul
 #if 0
   subroutine equal_(lhs, rhs)
     implicit none
     class(matrix),intent(out) :: lhs
     class(matrix),intent(in)  :: rhs
 
-    !    lhs = init1_(rhs%size)
+    !    lhs = init1(rhs%size)
 
     !$omp parallel
     !$omp workshare
@@ -307,8 +294,9 @@ contains
     end do
   end subroutine inverse
 
-  function mdiv_(a, b) result(c)
-    type(matrix),intent(in)  :: a, b
+  function mdiv(a, b) result(c)
+    class(matrix),intent(in) :: a ! this
+    type(matrix),intent(in)  :: b
     type(matrix) :: c
     type(matrix) :: b_inv
     integer :: size
@@ -317,8 +305,8 @@ contains
     b_inv = matrix(size)
     c     = matrix(size)
     call inverse(size, b%mat, b_inv%mat)
-    c =  mmul_(a, b_inv)
-  end function mdiv_
+    c =  mmul(a, b_inv)
+  end function mdiv
 
   subroutine fini(this)
     implicit none
