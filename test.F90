@@ -3,7 +3,7 @@ module matrix_calc
 
   integer,parameter  :: dp = kind(1.0d0)
   real(dp),parameter :: tol = 1.0d-10
-  
+
   interface operator(+)
      procedure madd_
   end interface operator(+)
@@ -11,7 +11,7 @@ module matrix_calc
   interface operator(-)
      procedure msub_
   end interface operator(-)
-  
+
   interface operator(*)
      procedure mmul_
   end interface operator(*)
@@ -46,7 +46,7 @@ module matrix_calc
 #endif
      final            :: fini
   end type matrix
-  
+
 contains
   subroutine gen_rand(size, a, val_min, val_max, seed)
     use mkl_vsl_type
@@ -107,7 +107,7 @@ contains
 
     call gen_rand(this%size**2, this%mat, val_min, val_max, seed)
   end subroutine set_mat_
-  
+
   subroutine show_mat_(this)
     class(matrix),intent(in) :: this
     integer :: i, j
@@ -119,7 +119,7 @@ contains
        write(6, *)
     end do
   end subroutine show_mat_
-  
+
   function madd_(a, b) result(c)
     implicit none
     type(matrix),intent(in)  :: a, b
@@ -153,7 +153,7 @@ contains
        end do
     end do
   end function msub_
-  
+
   function mmul_(a, b) result(c)
     implicit none
     type(matrix),intent(in)  :: a, b
@@ -178,8 +178,8 @@ contains
     class(matrix),intent(out) :: lhs
     class(matrix),intent(in)  :: rhs
 
-!    lhs = init1_(rhs%size)
-    
+    !    lhs = init1_(rhs%size)
+
     !$omp parallel
     !$omp workshare
     lhs%mat(:, :) = rhs%mat(:, :)
@@ -219,7 +219,7 @@ contains
              max0 = tmp
              ip  = i
           end if
-       end do       
+       end do
 
        if (max0 <= tol) then
           write(6, *) "one of diagonal component is smaller than", tol
@@ -253,9 +253,6 @@ contains
           end do
        end do
     end do
-
-    ! write(100, *) ipivot ! for a debug
-    
   end subroutine lu_decomp
 
   subroutine inverse(size, a, a_inv)
@@ -277,7 +274,7 @@ contains
     !$omp end workshare
     !$omp end parallel
     call lu_decomp(size, a, ipivot, lu)
-    
+
     do k = 1, size
        !$omp parallel
        !$omp workshare
@@ -285,7 +282,7 @@ contains
        !$omp end workshare
        !$omp end parallel
        unit_vec(k) = 1.0d0
-       
+
        ! forward substitution
        y(1) = unit_vec(ipivot(1))
        do i = 2, size
@@ -296,12 +293,12 @@ contains
           end do
           y(i) = unit_vec(ipivot(i)) - tmp
        end do
-       
+
        ! backward substitution
        a_inv(size, k) = y(size)/lu(size, size)
        do i = size-1, 1, -1
           tmp = 0.0d0
-       !$omp parallel do reduction(+:tmp)
+          !$omp parallel do reduction(+:tmp)
           do j = i+1, size
              tmp = tmp + lu(i, j)*a_inv(j, k)
           end do
@@ -322,7 +319,7 @@ contains
     call inverse(size, b%mat, b_inv%mat)
     c =  mmul_(a, b_inv)
   end function mdiv_
-  
+
   subroutine fini(this)
     implicit none
     type(matrix),intent(inout) :: this
@@ -369,7 +366,7 @@ program main
   call e%show_mat
   write(6, *) "F = C/B (=A)"
   call f%show_mat
-  
+
   stop
 end program main
 
