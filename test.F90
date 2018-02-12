@@ -338,7 +338,6 @@ contains
     type(matrix),intent(in)  :: a, b
     type(matrix) :: c
     type(matrix) :: b_inv
-    integer :: i, j, k
     integer :: size
 
     size  = a%size
@@ -363,7 +362,6 @@ program main
   type(matrix) :: a, b, c, d, e, f
   integer :: size
   character(len=16) :: argv1
-  integer :: i
 
   if (iargc() == 0) then
      size = 4
