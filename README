@@ -13,13 +13,14 @@ c = a*b
 d = c+a-b
 e = d
 f = c/b ! = c*b^-1
+if (a == f) write(6, *) "A == F"
 
 simply use C++ is enough...?
 
-dc-fukuoka@myubuntu:~/git/f03_exercise$ make
-ifort -c /opt/intel/compilers_and_libraries_2017.3.191/linux/mkl/include/mkl_vsl.f90
-ifort -g -O3 -fopenmp test.F90 -mkl
-dc-fukuoka@myubuntu:~/git/f03_exercise$ ./a.out
+$ make
+ifort -c /opt/intel/compilers_and_libraries_2018.0.128/linux/mkl/include/mkl_vsl.f90
+ifort -warn all -g -O3 -mavx -fopenmp test.F90 -mkl
+$ ./a.out
  size:           4
  A:
    6.71751E-01  -5.11412E-01   5.03268E-01  -5.15220E-01
@@ -51,3 +52,5 @@ dc-fukuoka@myubuntu:~/git/f03_exercise$ ./a.out
   -1.42823E-01  -4.56335E-01   1.01004E-01  -7.82845E-01
   -7.78005E-01   9.79638E-01   7.61025E-01  -6.15416E-01
   -8.88567E-01  -5.99848E-01   3.96229E-01  -8.35100E-01
+ maximum error is   3.552713678800501E-015
+ A == F

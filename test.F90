@@ -19,11 +19,12 @@ module matrix_calc
      generic          :: init          => init0, init1
      procedure        :: set_mat
      procedure        :: show_mat
-     procedure        :: madd, msub, mmul, mdiv
+     procedure        :: madd, msub, mmul, mdiv, meql
      generic          :: operator(+)   => madd
      generic          :: operator(-)   => msub
      generic          :: operator(*)   => mmul
      generic          :: operator(/)   => mdiv
+     generic          :: operator(==)  => meql
 
      final            :: fini
   end type matrix
@@ -290,6 +291,27 @@ contains
     c =  mmul(a, b_inv)
   end function mdiv
 
+  function meql(a, b) result(res)
+    class(matrix),intent(in) :: a ! this
+    type(matrix),intent(in) :: b
+    logical :: res
+    integer :: i, j
+    integer :: size
+    real(dp) :: max_err
+
+    res = .true.
+    size = a%size
+    max_err = 0.0d0
+    !$omp parallel do reduction(max:max_err)
+    do j = 1, size
+       do i = 1, size
+          max_err = max(abs((a%mat(i, j))-b%mat(i, j)), max_err)
+       end do
+    end do
+    write(6, *) "maximum error is ", max_err
+    if (max_err >= tol) res = .false.
+  end function meql
+
   subroutine fini(this)
     implicit none
     type(matrix),intent(inout) :: this
@@ -336,6 +358,8 @@ program main
   call e%show_mat
   write(6, *) "F = C/B (=A)"
   call f%show_mat
+
+  if (a == f) write(6, *) "A == F"
 
   stop
 end program main
