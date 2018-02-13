@@ -24,10 +24,7 @@ module matrix_calc
      generic          :: operator(-)   => msub
      generic          :: operator(*)   => mmul
      generic          :: operator(/)   => mdiv
-#if 0
-     procedure        :: equal
-     generic          :: assignment(=) => equal
-#endif
+
      final            :: fini
   end type matrix
 
@@ -159,21 +156,6 @@ contains
        end do
     end do
   end function mmul
-#if 0
-  subroutine equal_(lhs, rhs)
-    implicit none
-    class(matrix),intent(out) :: lhs
-    class(matrix),intent(in)  :: rhs
-
-    !    lhs = init1(rhs%size)
-
-    !$omp parallel
-    !$omp workshare
-    lhs%mat(:, :) = rhs%mat(:, :)
-    !$omp end workshare
-    !$omp end parallel
-  end subroutine equal_
-#endif
 
   ! ref: http://workspacememory.hatenablog.com/entry/2017/03/01/173753
   subroutine lu_decomp(size, a, ipivot, lu)
