@@ -15,17 +15,21 @@ module matrix_calc
      integer :: size
      real(dp),allocatable,dimension(:, :) :: mat
    contains
-     procedure,nopass :: init0, init1
+     procedure,nopass :: init0
+     procedure,nopass :: init1
      generic          :: init          => init0, init1
      procedure        :: set_mat
      procedure        :: show_mat
-     procedure        :: madd, msub, mmul, mdiv, meql
+     procedure        :: madd
+     procedure        :: msub
+     procedure        :: mmul
+     procedure        :: mdiv
+     procedure        :: meql
      generic          :: operator(+)   => madd
      generic          :: operator(-)   => msub
      generic          :: operator(*)   => mmul
      generic          :: operator(/)   => mdiv
      generic          :: operator(==)  => meql
-
      final            :: fini
   end type matrix
 
@@ -328,10 +332,10 @@ program main
   integer :: size
   character(len=16) :: argv1
 
-  if (iargc() == 0) then
+  if (command_argument_count() == 0) then
      size = 4
   else
-     call getarg(1, argv1)
+     call get_command_argument(1, argv1)
      read(argv1, *) size
   end if
   write(6, *) "size:", size

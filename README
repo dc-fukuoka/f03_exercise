@@ -15,7 +15,7 @@ e = d
 f = c/b ! = c*b^-1
 if (a == f) write(6, *) "A == F"
 
-simply use C++ is enough...?
+looks like python, simply use C++ is enough...?
 
 $ make
 ifort -c /opt/intel/compilers_and_libraries_2018.0.128/linux/mkl/include/mkl_vsl.f90
